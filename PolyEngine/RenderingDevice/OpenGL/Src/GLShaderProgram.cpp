@@ -111,9 +111,8 @@ void GLShaderProgram::LoadShader(eShaderUnitType type, const String& shaderName)
 		gConsole.LogError("Shader compilation: {}", std::string(&errorMessage[0]));
 		ASSERTE(false, "Shader compilation failed!");
 	}
-
 	glAttachShader(ProgramHandle, shader);
-	glDeleteShader(shader);  // is it ok to do it here?
+	glDeleteShader(shader);
 	CHECK_GL_ERR();
 }
 
@@ -126,9 +125,9 @@ size_t GLShaderProgram::GetProgramHandle() const
 //------------------------------------------------------------------------------
 void GLShaderProgram::RegisterUniform(const String& type, const String& name)
 {
-	if (Uniforms.find(name) != Uniforms.end())
+	if (!Uniforms.Get(name))
 		return;
-
+	
 	GLint location = 0;
 	location = glGetUniformLocation(ProgramHandle, name.GetCStr());
 	if (location == -1)
@@ -136,73 +135,73 @@ void GLShaderProgram::RegisterUniform(const String& type, const String& name)
 		gConsole.LogError("Invalid uniform location for {}. Probably optimized out.", name);
 		return;
 	}
-	Uniforms[name] = UniformInfo(type, location);
+	Uniforms.Get(name) = UniformInfo(type, location);
 	CHECK_GL_ERR();
 }
 
 //------------------------------------------------------------------------------
 void GLShaderProgram::SetUniform(const String& name, int val)
 {
-	auto it = Uniforms.find(name);
-	if (it != Uniforms.end())
+	auto it = Uniforms.Entry(name);
+	if (!it.IsVacant())
 	{
-		HEAVY_ASSERTE(it->second.TypeName == "int" || it->second.TypeName == "sampler2D", "Invalid uniform type!");
-		glUniform1i(it->second.Location, val);
+		HEAVY_ASSERTE(it.OccupiedGet().TypeName == "int" || it.OccupiedGet().TypeName == "sampler2D", "Invalid uniform type!");
+		glUniform1i(it, val);
 	}
 }
 
 //------------------------------------------------------------------------------
 void GLShaderProgram::SetUniform(const String& name, float val)
 {
-	auto it = Uniforms.find(name);
-	if (it != Uniforms.end())
+	auto it = Uniforms.Entry(name);
+	if (!it.IsVacant())
 	{
-		HEAVY_ASSERTE(it->second.TypeName == "float", "Invalid uniform type!");
-		glUniform1f(it->second.Location, val);
+		HEAVY_ASSERTE(it.OccupiedGet().TypeName == "float", "Invalid uniform type!");
+		glUniform1f(it, val);
 	}
 }
 
 //------------------------------------------------------------------------------
 void GLShaderProgram::SetUniform(const String & name, float val1, float val2)
 {
-	auto it = Uniforms.find(name);
-	if (it != Uniforms.end())
+	auto it = Uniforms.Entry(name);
+	if (!it.IsVacant())
 	{
-		HEAVY_ASSERTE(it->second.TypeName == "vec2", "Invalid uniform type!");
-		glUniform2f(it->second.Location, val1, val2);
+		HEAVY_ASSERTE(it.OccupiedGet().TypeName == "vec2", "Invalid uniform type!");
+		glUniform2f(it, val1, val2);
 	}
 }
 
 //------------------------------------------------------------------------------
 void GLShaderProgram::SetUniform(const String& name, const Vector& val)
 {
-	auto it = Uniforms.find(name);
-	if (it != Uniforms.end())
+	auto it = Uniforms.Entry(name);
+	if (!it.IsVacant())
 	{
-		HEAVY_ASSERTE(it->second.TypeName == "vec4", "Invalid uniform type!");
-		glUniform4f(it->second.Location, val.X, val.Y, val.Z, val.W);
+		HEAVY_ASSERTE(it.OccupiedGet().TypeName == "vec4", "Invalid uniform type!");
+		glUniform4f(it, val.X, val.Y, val.Z, val.W);
 	}
 }
 
 //------------------------------------------------------------------------------
 void GLShaderProgram::SetUniform(const String& name, const Color& val)
 {
-	auto it = Uniforms.find(name);
-	if (it != Uniforms.end())
+	auto it = Uniforms.Entry(name);
+	if (!it.IsVacant())
 	{
-		HEAVY_ASSERTE(it->second.TypeName == "vec4", "Invalid uniform type!");
-		glUniform4f(it->second.Location, val.R, val.G, val.B, val.A);
+		HEAVY_ASSERTE( it.OccupiedGet().TypeName == "vec4", "Invalid uniform type!");
+		glUniform4f( it, val.R, val.G, val.B, val.A);
 	}
 }
 
 //------------------------------------------------------------------------------
 void GLShaderProgram::SetUniform(const String& name, const Matrix& val)
 {
-	auto it = Uniforms.find(name);
-	if (it != Uniforms.end())
+	auto it = Uniforms.Entry(name);
+	if (!it.IsVacant())
 	{
-		HEAVY_ASSERTE(it->second.TypeName == "mat4", "Invalid uniform type!");
-		glUniformMatrix4fv(it->second.Location, 1, GL_FALSE, val.GetTransposed().GetDataPtr());
+		HEAVY_ASSERTE( it.OccupiedGet().TypeName == "mat4", "Invalid uniform type!");
+		glUniformMatrix4fv( it, 1, GL_FALSE, val.GetTransposed().GetDataPtr());	
 	}
 }
 
@@ -241,7 +240,6 @@ void Poly::GLShaderProgram::AnalyzeShaderCode(eShaderUnitType type)
 			ASSERTE(match.size() == 3, "Invalid regex result when parsing uniforms!");
 			gConsole.LogDebug("Uniform {} of type {} found.", match[2].str(), match[1].str());
 
-			//TODO remove unnecessary string copy
 			RegisterUniform(String(match[1].str().c_str()), String(match[2].str().c_str()));
 		}
 	}
@@ -260,7 +258,7 @@ void Poly::GLShaderProgram::AnalyzeShaderCode(eShaderUnitType type)
 			gConsole.LogDebug("Out {} of type {} found.", match[2].str(), match[1].str());
 
 			//TODO remove unnecessary string copy
-			Outputs.insert(std::make_pair(String(match[2].str().c_str()), OutputInfo(String(match[1].str().c_str()), index++)));
+			Outputs.Insert(String(match[2].str().c_str()), OutputInfo(String(match[1].str().c_str()), index++)); //Change: remove std::make_pair
 		}
 	}
 }

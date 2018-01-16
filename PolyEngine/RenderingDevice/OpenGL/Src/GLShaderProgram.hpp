@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include "OrderedMap.hpp"
 #include <Core.hpp>
 
 typedef unsigned int GLuint;
@@ -49,8 +50,8 @@ namespace Poly {
 		void SetUniform(const String& name, const Color& val);
 		void SetUniform(const String& name, const Matrix& val);
 
-		const std::map<String, OutputInfo>& GetOutputsInfo() const { return Outputs; }
-		const std::map<String, UniformInfo>& GetUniformsInfo() const { return Uniforms; }
+		const OrderedMap<String, OutputInfo>& GetOutputsInfo() const { return Outputs; }
+		const OrderedMap<String, UniformInfo>& GetUniformsInfo() const { return Uniforms; }
 
 		void RegisterUniform(const String& type, const String& name);
 	private:
@@ -62,8 +63,8 @@ namespace Poly {
 
 		void AnalyzeShaderCode(eShaderUnitType type);
 
-		std::map<String, UniformInfo> Uniforms;
-		std::map<String, OutputInfo> Outputs;
+		OrderedMap<String, UniformInfo> Uniforms;
+		OrderedMap<String, OutputInfo> Outputs;
 		GLuint ProgramHandle;
 		EnumArray<String, eShaderUnitType> ShaderCode;
 

@@ -2,6 +2,7 @@
 
 #include <Defines.hpp>
 #include <String.hpp>
+#include "OrderedMap.hpp"
 #include <map>
 #include "GLUtils.hpp"
 #include "GLShaderProgram.hpp"
@@ -58,13 +59,13 @@ namespace Poly
 		RenderingTargetBase* GetInputTarget(const String& name);
 		RenderingTargetBase* GetOutputTarget(const String& name);
 
-		const std::map<String, RenderingTargetBase*>& GetInputs() const { return Inputs; }
-		const std::map<String, RenderingTargetBase*>& GetOutputs() const { return Outputs; }
+		const OrderedMap<String, RenderingTargetBase*>& GetInputs() const { return Inputs; }
+		const OrderedMap<String, RenderingTargetBase*>& GetOutputs() const { return Outputs; }
 		GLShaderProgram& GetProgram() { return Program; }
 
 	private:
-		std::map<String, RenderingTargetBase*> Inputs;
-		std::map<String, RenderingTargetBase*> Outputs;
+		OrderedMap<String, RenderingTargetBase*> Inputs;
+		OrderedMap<String, RenderingTargetBase*> Outputs;
 
 		GLShaderProgram Program;
 		GLuint FBO = 0;

@@ -7,7 +7,7 @@
 
 #include "AssetsPathConfig.hpp"
 #include "ResourceBase.hpp"
-
+#include "OrderedMap.hpp"
 #include <map>
 
 namespace Poly
@@ -20,21 +20,21 @@ namespace Poly
 	ENGINE_DLLEXPORT String LoadTextFileRelative(eResourceSource Source, const String& path);
 	ENGINE_DLLEXPORT void SaveTextFileRelative(eResourceSource Source, const String& path, const String& text);
 
-	namespace Impl { template<typename T> std::map<String, std::unique_ptr<T>>& GetResources(); }
+	namespace Impl { template<typename T> OrderedMap<String, std::unique_ptr<T>>& GetResources(); }
 
 #define ENGINE_DECLARE_RESOURCE(type, map_name) \
 	namespace Impl { \
-		ENGINE_DLLEXPORT extern std::map<String, std::unique_ptr<type>> map_name; \
-		template<> inline std::map<String, std::unique_ptr<type>>& GetResources<type>() { return map_name; } \
+		ENGINE_DLLEXPORT extern OrderedMap<String, std::unique_ptr<type>> map_name; \
+		template<> inline OrderedMap<String, std::unique_ptr<type>>& GetResources<type>() { return map_name; } \
 	}
 
 #define DECLARE_RESOURCE(type, map_name) \
 	namespace Impl { \
-		GAME_DLLEXPORT extern std::map<String, std::unique_ptr<type>> map_name; \
-		template<> inline std::map<String, std::unique_ptr<type>>& GetResources<type>() { return map_name; } \
+		GAME_DLLEXPORT extern OrderedMap<String, std::unique_ptr<type>> map_name; \
+		template<> inline OrderedMap<String, std::unique_ptr<type>>& GetResources<type>() { return map_name; } \
 	}
 
-#define DEFINE_RESOURCE(type, map_name) namespace Poly { namespace Impl { std::map<String, std::unique_ptr<type>> map_name = {}; }}
+#define DEFINE_RESOURCE(type, map_name) namespace Poly { namespace Impl { OrderedMap<String, std::unique_ptr<type>> map_name = {}; }}
 
 	ENGINE_DECLARE_RESOURCE(MeshResource, gMeshResourcesMap)
 	ENGINE_DECLARE_RESOURCE(TextureResource, gTextureResourcesMap)
@@ -56,15 +56,13 @@ namespace Poly
 			return Load(path, true, eResourceSource::GAME);
 		}
 
-		//------------------------------------------------------------------------------
 		static T* Load(const String& path, eResourceSource source = eResourceSource::NONE)
 		{
-			auto it = Impl::GetResources<T>().find(path);
-
+			auto it = Impl::GetResources<T>().Entry(path);
 			// Check if it is already loaded
-			if (it != Impl::GetResources<T>().end())
+			if (!it.IsVacant())  // T* - Texture, it - map. how to get access to value
 			{
-				T* resource = it->second.get();
+				T* resource = it.OrInsert(path);//.OccupiredGet()
 				resource->AddRef();
 				return resource;
 			}
@@ -91,7 +89,7 @@ namespace Poly
 				return nullptr;
 			}
 
-			Impl::GetResources<T>().insert(std::make_pair(path, std::unique_ptr<T>(resource)));
+			Impl::GetResources<T>().Insert(path, std::unique_ptr<T>(resource));
 			resource->Path = path;
 			resource->AddRef();
 			return resource;
@@ -102,9 +100,10 @@ namespace Poly
 		{
 			if (resource->RemoveRef())
 			{
-				auto it = Impl::GetResources<T>().find(resource->GetPath());
-				HEAVY_ASSERTE(it != Impl::GetResources<T>().end(), "Resource creation failed!");
-				Impl::GetResources<T>().erase(it);
+				auto it = Impl::GetResources<T>().Entry(resource->GetPath());
+				HEAVY_ASSERTE(it.., "Resource creation failed!");
+				//Map nie ma Geta. 
+				Impl::GetResources<T>().Remove(resource->GetPath());// ::
 			}
 		}
 	};

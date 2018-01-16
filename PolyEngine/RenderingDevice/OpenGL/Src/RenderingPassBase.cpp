@@ -14,13 +14,13 @@ void RenderingPassBase::BindOutput(const String& outputName, RenderingTargetBase
 {
 	if (target)
 	{
-		ASSERTE(Outputs.find(outputName) == Outputs.end(), "There is a target already bound!");
-		Outputs[outputName] = target;
+		ASSERTE(!Outputs.Get(outputName), "There is a target already bound!");
+		Outputs.Get(outputName) = target;
 	}
 	else
 	{
-		ASSERTE(Outputs.find(outputName) != Outputs.end(), "There is no target bound!");
-		Outputs.erase(outputName);
+		ASSERTE(Outputs.Get(outputName), "There is no target bound!");
+		Outputs.Remove(outputName);
 	}
 }
 
@@ -29,13 +29,13 @@ void RenderingPassBase::BindInput(const String& inputName, RenderingTargetBase* 
 {
 	if (target)
 	{
-		ASSERTE(Inputs.find(inputName) == Inputs.end(), "There is a target already bound!");
-		Inputs[inputName] = target;
+		ASSERTE(!Inputs.Get(inputName) , "There is a target already bound!");
+		Inputs.Get(inputName) = target;
 	}
 	else
 	{
-		ASSERTE(Inputs.find(inputName) != Inputs.end(), "There is no target bound!");
-		Inputs.erase(inputName);
+		ASSERTE(Inputs.Get(inputName) , "There is no target bound!");
+		Inputs.Remove(inputName);
 	}
 }
 
@@ -46,8 +46,9 @@ void Poly::RenderingPassBase::DebugDraw()
 		uint32_t attachmentsCount = 0;
 		for (auto& kv : GetOutputs())
 		{
-			if (kv.second->GetType() == eRenderingTargetType::TEXTURE_2D)
-				++attachmentsCount;
+			RenderingTargetBase* target = kv->value;                  //
+			if (target->GetType() == eRenderingTargetType::TEXTURE_2D)
+					++attachmentsCount;
 		}
 
 		if (attachmentsCount == 0)
@@ -63,7 +64,7 @@ void Poly::RenderingPassBase::DebugDraw()
 		uint32_t count = 0;
 		for (auto& kv : GetOutputs())
 		{
-			RenderingTargetBase* target = kv.second;
+			RenderingTargetBase* target = kv->value;
 
 			if (target->GetType() == eRenderingTargetType::TEXTURE_2D)
 			{
@@ -116,8 +117,8 @@ void RenderingPassBase::Run(World* world, const CameraComponent* camera, const A
 	uint32_t samplerCount = 0;
 	for (auto& kv : GetInputs())
 	{
-		const String& name = kv.first;
-		RenderingTargetBase* target = kv.second;
+		const String& name = kv.key;
+		RenderingTargetBase* target = kv->value;
 
 		switch (target->GetType())
 		{
@@ -158,7 +159,7 @@ void RenderingPassBase::Run(World* world, const CameraComponent* camera, const A
 //------------------------------------------------------------------------------
 void RenderingPassBase::Finalize()
 {
-	if (GetOutputs().size() == 0)
+	if (GetOutputs().IsEmpty())
 		return; // we want the default FBO == 0, which is the screen buffer
 
 	ASSERTE(FBO == 0, "Calling finalize twice!");
@@ -171,15 +172,15 @@ void RenderingPassBase::Finalize()
 	Dynarray<GLenum> colorAttachements;
 	for (auto& kv : GetOutputs())
 	{
-		const String& name = kv.first;
-		RenderingTargetBase* target = kv.second;
+		const String& name = kv.key;
+		RenderingTargetBase* target = kv->value;
 
 		switch (target->GetType())
 		{
 		case eRenderingTargetType::TEXTURE_2D:
 		{
 			GLuint textureID = static_cast<Texture2DRenderingTarget*>(target)->GetTextureID();
-			size_t idx = Program.GetOutputsInfo().at(name).Index;
+			size_t idx = Program.GetOutputsInfo().Get(name).Value().Index;
 			GLenum attachementIdx = GL_COLOR_ATTACHMENT0 + (uint32_t)idx;
 			glBindTexture(GL_TEXTURE_2D, textureID);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, attachementIdx, GL_TEXTURE_2D, textureID, 0);
@@ -213,18 +214,18 @@ void RenderingPassBase::Finalize()
 //------------------------------------------------------------------------------
 RenderingTargetBase* RenderingPassBase::GetInputTarget(const String& name)
 {
-	auto it = Inputs.find(name);
-	if (it != Inputs.end())
-		return it->second;
+	auto it = Inputs.Entry(name);
+	if (!it.IsVacant())
+		return it.OccupiedGet();
 	return nullptr;
 }
 
 //------------------------------------------------------------------------------
 RenderingTargetBase* RenderingPassBase::GetOutputTarget(const String& name)
 {
-	auto it = Outputs.find(name);
-	if (it != Outputs.end())
-		return it->second;
+	auto it = Outputs.Entry(name);
+	if (!it.IsVacant())
+		return it.OccupiedGet();
 	return nullptr;
 }
 
